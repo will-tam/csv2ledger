@@ -22,16 +22,19 @@ parse()
     label=$2
     amount=$3
 
-#    echo "$date -> $label => $amount"
-
     echo $label | grep -q "ACHAT CB"
     if [ $? -eq 0 ]; then
+        # Pickup date in $label, and format $date as YY/MM/DD.
         date=$(echo $label | sed -e "s/.*\([0-9][0-9]\)\.\([0-9][0-9]\)\.\([0-9][0-9]\) .*/20\3\/\2\/\1/")
+        # Keep only before the date in $label (beware of the space just before the date ! ^^).
+        label=$(echo $label | sed -e "s/\(.*\)\(\s[0-9][0-9]\.[0-9][0-9]\.[0-9][0-9] .*\)/\1/")
     else
+        # Format $date as YY/MM/DD
         date=$(echo $date | awk -F"/" '{ print $3"/"$2"/"$1}')
     fi
 
-    label=$(echo $label | sed -e "s/\"//g ; s/ CARTE NUMERO 990 $//")
+    # Remove the " in $label.
+    label=$(echo $label | sed -e "s/\"//g")
     amount="$amount EUR"
 
     echo "$date;$label;$amount"
@@ -75,7 +78,7 @@ dateline=$(grep -n "Date;Lib" $wf)
 # Remove lines beetween 1 and before line of "Date;Lib".
 n=$(echo $dateline | cut -d':' -f1)
 sed -i 1,$((n-1))"d" $wf
-#sed $((n-1))"p" $wf >> $rf
+#sed $((n-1))"p" $wf >> $rf     # KEEP THIS COMMENT !!!
 
 
 # Write "Date;Lib..." in result file, an delete it from working file. And we don't need FRANCS anymore.
@@ -85,7 +88,6 @@ sed -i 1d $wf
 # Read each lines left in working file.
 while read line
 do
-#    echo $line >> $rf
     plist=$(echo $line | awk -F';' '{ print $1";"$2";"$3 }')
 
     old_IFS=$IFS
@@ -93,11 +95,10 @@ do
     # Separator become ";" instead of " "
     IFS=';'
     parse $plist >> $rf
-#    echo "*******" >> $rf
     IFS=$old_IFS
 
 done < $wf
 
-#rm -v $wf
+rm -v $wf
 
 exit 0
